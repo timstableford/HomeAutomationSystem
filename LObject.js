@@ -1,3 +1,4 @@
+var Int64 = require('node-int64');
 /**
  * Created by tstableford on 25/11/15.
  */
@@ -10,6 +11,7 @@ LObject.TYPES = {
     UINT16: 5,
     INT32: 6,
     UINT32: 7,
+    INT64: 8,
     FLOAT: 12
 };
 
@@ -62,6 +64,13 @@ var typesArray = [
         toBuffer: function(that, value, offset, length) { return that.writeUInt32BE(value, offset); },
         fromBuffer: function(that, offset, length) { return that.readUInt32BE(offset); },
         size: 4
+    },
+    // int64
+    {
+        id: LObject.TYPES.INT64,
+        toBuffer: function(that, value, offset, length) { return (new Int64(value).toBuffer()).copy(that, offset); },
+        fromBuffer: function(that, offset, length) { return new Int64(that, offset).toNumber() },
+        size: 8
     },
     // float
     {

@@ -33,20 +33,21 @@ exports.crcAppend = function(crc, data) {
     return ((crc << 8) ^ (x << 12) ^ (x << 5) ^ x) & 0xFFFF;
 };
 
-exports.makeHeader = function(id, data) {
-    var output = Buffer.alloc(data.length + 2);
-    output[0] = id[0];
-    output[1] = id[1];
-    data.copy(output, 2);
-
-    return output;
-};
-
 exports.getHeader = function(data) {
     return {
-        id: [ data[0], data[1] ],
-        data: data.slice(2)
+        type: data.readUInt16BE(0),
+        fid: data.readUInt16BE(2),
+        data: data.slice(4)
     };
+};
+
+exports.makeHeader = function(type, fid, data) {
+    var output = Buffer.alloc(data.length + 4);
+    output.writeUInt16BE(type, 0);
+    output.writeUInt16BE(fid, 2);
+    data.copy(output, 4);
+
+    return output;
 };
 
 exports.compareBus = function(bus_a, bus_b) {
