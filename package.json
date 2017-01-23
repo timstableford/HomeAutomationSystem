@@ -1,0 +1,10 @@
+{
+  "name": "homeautomation",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "start": "nodejs app.js"
+  },
+  "dependencies": {
+  }
+}
