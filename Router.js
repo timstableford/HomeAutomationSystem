@@ -12,12 +12,14 @@ function Router() {
 
     // Parse ping.
     this.on(Router.TYPE_GENERIC, Router.PING_FID, function (device, router, obj) {
-        router.send(device, Router.PONG_FID, new LObject().push(LObject.TYPES.INT64, Date.now()));
+        router.send(device, Router.PONG_FID, new LObject().push(LObject.TYPES.UINT32, Math.floor(Date.now() / 1000)));
+        // Get the time at element 0.
+        device.last_ping = obj.getAt(0) * 1000;
     });
     // Parse Pong.
     this.on(Router.TYPE_GENERIC, Router.PONG_FID, function (device, router, obj) {
         // Get the time at element 0.
-        device.last_ping = obj.getAt(0);
+        device.last_ping = obj.getAt(0) * 1000;
     });
     var $this = this;
     // Parse router ping.
@@ -40,6 +42,7 @@ Router.TYPE_GENERIC = 0;
 Router.TYPE_ROUTER = 1;
 Router.PING_FID = 10;
 Router.PONG_FID = 11;
+Router.MAKE_FID = 0;
 
 Router.prototype.getRouter = function() {
     return this.router;
@@ -79,9 +82,7 @@ Router.prototype.send = function(device, fid, obj) {
     }
     var header = packet.makeHeader(device.type, fid, obj.getBuffer());
     var data = packet.makePacket(device.bus_id, device.address, header);
-    this.client.send(data, this.router.port, this.router.address, function(err) {
-        console.log("Failed to send: " + data + "\n" + err);
-    });
+    this.client.send(data, this.router.port, this.router.address);
     return true;
 };
 
@@ -99,10 +100,9 @@ Router.prototype.makeDevice = function(bus_id, address, type) {
             break;
         }
     }
-    if (listener == null) {
-        return null;
+    if (listener != null) {
+        listener.callback(device);
     }
-    listener.callback(device);
 
     return device;
 };
@@ -136,6 +136,7 @@ Router.prototype.route = function(bus_id, address, type, fid, obj) {
     // If the device is new then create it.
     if (device == null) {
         device = this.makeDevice(bus_id, address, type);
+        this.deviceList.push(device);
     }
     if (device != null) {
         for (var i = 0; i < this.listeners.length; i++) {

@@ -69,7 +69,7 @@ var typesArray = [
     {
         id: LObject.TYPES.INT64,
         toBuffer: function(that, value, offset, length) { return (new Int64(value).toBuffer()).copy(that, offset); },
-        fromBuffer: function(that, offset, length) { return new Int64(that, offset).toNumber() },
+        fromBuffer: function(that, offset, length) { return new Int64(that, offset).toNumber(true) },
         size: 8
     },
     // float

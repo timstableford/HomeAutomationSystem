@@ -60,6 +60,9 @@ exports.compareBus = function(bus_a, bus_b) {
 exports.makePacket = function(bus_id, address, data) {
     var output = Buffer.alloc(data.length + 9);
     output.writeUInt16BE(data.length + 7, 0);
+    if (Array.isArray(bus_id)) {
+        bus_id = Buffer.from(bus_id);
+    }
     bus_id.copy(output, 2, 0, 4);
     output.writeUInt8(address, 6);
     data.copy(output, 7);
