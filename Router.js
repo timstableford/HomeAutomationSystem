@@ -41,6 +41,10 @@ Router.TYPE_ROUTER = 1;
 Router.PING_FID = 10;
 Router.PONG_FID = 11;
 
+Router.prototype.getRouter = function() {
+    return this.router;
+};
+
 Router.prototype.listen = function(port) {
     if (this.client != null) {
         this.client.close();
@@ -113,6 +117,10 @@ Router.prototype.getDevice = function(bus_id, address) {
     }
 
     return null;
+};
+
+Router.prototype.getDevices = function() {
+    return this.deviceList;
 };
 
 Router.prototype.on = function(type, fid, callback) {
