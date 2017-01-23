@@ -23,6 +23,9 @@ function Router() {
     // Parse router ping.
     this.on(Router.TYPE_ROUTER, Router.PING_FID, function (device, router, obj) {
         if ($this.remote != null) {
+            if ($this.router == null) {
+                console.log("Found the router at: " + $this.remote.address + ":" + $this.remote.port);
+            }
             $this.router = {
                 address: $this.remote.address,
                 port: $this.remote.port
