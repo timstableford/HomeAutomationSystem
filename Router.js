@@ -8,8 +8,8 @@ const LObject = require('./LObject.js');
 function Router() {
     this.listeners = [];
     this.deviceList = [];
-    this.router = null;
 
+    var $this = this;
     // Parse ping.
     this.on(Router.TYPE_GENERIC, Router.PING_FID, function (device, router, obj) {
         router.send(device, Router.PONG_FID, new LObject().push(LObject.TYPES.UINT32, Math.floor(Date.now() / 1000)));
@@ -21,21 +21,6 @@ function Router() {
         // Get the time at element 0.
         device.last_ping = obj.getAt(0) * 1000;
     });
-    var $this = this;
-    // Parse router ping.
-    this.on(Router.TYPE_ROUTER, Router.PING_FID, function (device, router, obj) {
-        if ($this.remote != null) {
-            if ($this.router == null) {
-                console.log("Found the router at: " + $this.remote.address + ":" + $this.remote.port);
-            }
-            $this.router = {
-                address: $this.remote.address,
-                port: $this.remote.port
-            };
-        } else {
-            console.log("Failed to set router on ping. Unknown remote.");
-        }
-    });
 }
 
 Router.TYPE_GENERIC = 0;
@@ -43,10 +28,6 @@ Router.TYPE_ROUTER = 1;
 Router.PING_FID = 10;
 Router.PONG_FID = 11;
 Router.MAKE_FID = 0;
-
-Router.prototype.getRouter = function() {
-    return this.router;
-};
 
 Router.prototype.listen = function(port) {
     if (this.client != null) {
@@ -67,8 +48,7 @@ Router.prototype.listen = function(port) {
             var header = packet.getHeader(parsed.data);
             var obj = new LObject().parse(header.data);
             if (obj != null && obj != undefined) {
-                $this.remote = remote;
-                $this.route(parsed.bus_id, parsed.address, header.type, header.fid, obj);
+                $this.route(remote, parsed.bus_id, parsed.address, header.type, header.fid, obj);
             }
         }
     });
@@ -82,7 +62,7 @@ Router.prototype.send = function(device, fid, obj) {
     }
     var header = packet.makeHeader(device.type, fid, obj.getBuffer());
     var data = packet.makePacket(device.bus_id, device.address, header);
-    this.client.send(data, this.router.port, this.router.address);
+    this.client.send(data, device.router.port, device.router.address);
     return true;
 };
 
@@ -131,7 +111,7 @@ Router.prototype.on = function(type, fid, callback) {
     });
 };
 
-Router.prototype.route = function(bus_id, address, type, fid, obj) {
+Router.prototype.route = function(remote, bus_id, address, type, fid, obj) {
     var device = this.getDevice(bus_id, address);
     // If the device is new then create it.
     if (device == null) {
@@ -139,6 +119,10 @@ Router.prototype.route = function(bus_id, address, type, fid, obj) {
         this.deviceList.push(device);
     }
     if (device != null) {
+        device.router = {
+            address: remote.address,
+            port: remote.port
+        };
         for (var i = 0; i < this.listeners.length; i++) {
             if ((this.listeners[i].type == type || this.listeners[i].type == 0) && this.listeners[i].fid == fid) {
                 this.listeners[i].callback(device, this, obj);
