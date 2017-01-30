@@ -1,4 +1,4 @@
-var Int64 = require('node-int64');
+const Int64 = require('node-int64');
 /**
  * Created by tstableford on 25/11/15.
  */
@@ -15,7 +15,7 @@ LObject.TYPES = {
     FLOAT: 12
 };
 
-var typesArray = [
+const typesArray = [
     // String
     {
         id: LObject.TYPES.STRING,
@@ -86,7 +86,7 @@ function LObject() {
 }
 
 function findById(arr, id) {
-    for(var i = 0; i < arr.length; i++) {
+    for(let i = 0; i < arr.length; i++) {
         if(arr[i].id == id) {
             return arr[i];
         }
@@ -95,8 +95,8 @@ function findById(arr, id) {
 }
 
 function numStrings(obj) {
-    var numStrings = 0;
-    for(var i = 0; i < obj.items.length; i++) {
+    let numStrings = 0;
+    for(let i = 0; i < obj.items.length; i++) {
         if(obj.items[i].type == LObject.TYPES.STRING) {
             numStrings++;
         }
@@ -105,8 +105,8 @@ function numStrings(obj) {
 }
 
 function offsetOf(obj, id) {
-    var offset = 0;
-    for(var i = 0; i < obj.items.length && i < id; i++) {
+    let offset = 0;
+    for(let i = 0; i < obj.items.length && i < id; i++) {
         offset += obj.items[i].size;
     }
 
@@ -117,8 +117,8 @@ function stringAt(obj, num) {
     if(num >= numStrings(obj)) {
         return null;
     }
-    var strIndex = 0;
-    for(var i = 0; i < obj.items.length; i++) {
+    let strIndex = 0;
+    for(let i = 0; i < obj.items.length; i++) {
         if(obj.items[i].type == LObject.TYPES.STRING) {
             if(strIndex == num) {
                 return obj.items[i];
@@ -132,15 +132,15 @@ function stringAt(obj, num) {
 
 LObject.prototype.parse = function(buffer) {
     try {
-        var numItems = buffer.readUInt8(0);
+        const numItems = buffer.readUInt8(0);
         this.items = [];
         for (var i = 0; i < numItems; i++) {
             this.items[i] = {};
             this.items[i].type = buffer.readUInt8(i + 1);
         }
 
-        var strNum = 0;
-        for (var i = 0; i < numItems; i++) {
+        let strNum = 0;
+        for (let i = 0; i < numItems; i++) {
             if (this.items[i].type == LObject.TYPES.STRING) {
                 this.items[i].size = buffer.readUInt8(numItems + 1 + strNum);
                 strNum++;
@@ -152,9 +152,8 @@ LObject.prototype.parse = function(buffer) {
 
         return this;
     } catch (err) {
-        console.log("Parse error:\n" + err);
+        return null;
     }
-    return null;
 };
 
 LObject.prototype.toString = function() {
@@ -169,7 +168,7 @@ LObject.prototype.setAt = function(index, type, value) {
     if(index > this.items.length) {
         return null;
     }
-    var t = findById(typesArray, type);
+    const t = findById(typesArray, type);
     if(t == null) {
         return null;
     }
@@ -193,12 +192,12 @@ LObject.prototype.insertAt = function(index, type, value) {
     if(index > this.items.length) {
         return null;
     }
-    var t = findById(typesArray, type);
+    const t = findById(typesArray, type);
     if(t == null) {
         return null;
     }
 
-    var item = {};
+    const item = {};
     item.type = type;
     item.data = value;
     if(type == LObject.TYPES.STRING) {
@@ -232,8 +231,8 @@ LObject.prototype.toJSON = function() {
 };
 
 LObject.prototype.getSize = function() {
-    var size = this.items.length + numStrings(this) + 1;
-    for(var i = 0; i < this.items.length; i++) {
+    let size = this.items.length + numStrings(this) + 1;
+    for(let i = 0; i < this.items.length; i++) {
         size += this.items[i].size;
     }
 
@@ -241,18 +240,18 @@ LObject.prototype.getSize = function() {
 };
 
 LObject.prototype.getBuffer = function() {
-    var buffer = new Buffer(this.getSize());
+    const buffer = new Buffer(this.getSize());
     buffer.writeUInt8(this.items.length, 0);
-    for(var i = 0; i < this.items.length; i++) {
+    for(let i = 0; i < this.items.length; i++) {
         buffer.writeUInt8(this.items[i].type, i + 1);
     }
-    for(var i = 0; i < numStrings(this); i++) {
+    for(let i = 0; i < numStrings(this); i++) {
         buffer.writeUInt8(stringAt(this, i).size, 1 + this.items.length + i);
     }
 
-    var offset = 1 + this.items.length + numStrings(this);
-    for(var i = 0; i < this.items.length; i++) {
-        var type = findById(typesArray, this.items[i].type);
+    let offset = 1 + this.items.length + numStrings(this);
+    for(let i = 0; i < this.items.length; i++) {
+        const type = findById(typesArray, this.items[i].type);
         type.toBuffer(buffer, this.items[i].data, offset, this.items[i].size);
         offset += this.items[i].size;
     }

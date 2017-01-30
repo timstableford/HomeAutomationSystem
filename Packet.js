@@ -6,7 +6,7 @@
  */
 
 exports.crc16 = function(data, offset, length) {
-    var crc = exports.crcInit();
+    let crc = exports.crcInit();
 
     if(offset == undefined) {
         offset = 0;
@@ -17,7 +17,7 @@ exports.crc16 = function(data, offset, length) {
         length = data.length;
     }
 
-    for(var i = offset; i < length; i++) {
+    for(let i = offset; i < length; i++) {
         crc = exports.crcAppend(crc, data[i]);
     }
     return crc;
@@ -28,24 +28,30 @@ exports.crcInit = function() {
 };
 
 exports.crcAppend = function(crc, data) {
-    var x = crc >> 8 ^ data;
+    let x = crc >> 8 ^ data;
     x ^= x >> 4;
     return ((crc << 8) ^ (x << 12) ^ (x << 5) ^ x) & 0xFFFF;
 };
 
 exports.getHeader = function(data) {
+    let msg = null;
+    if (data.length > 6) {
+        msg = data.slice(6)
+    }
     return {
         type: data.readUInt16BE(0),
         fid: data.readUInt16BE(2),
-        data: data.slice(4)
+        id: data.readUInt16BE(4),
+        data: msg
     };
 };
 
-exports.makeHeader = function(type, fid, data) {
-    var output = Buffer.alloc(data.length + 4);
+exports.makeHeader = function(type, fid, id, data) {
+    const output = Buffer.alloc(data.length + 6);
     output.writeUInt16BE(type, 0);
     output.writeUInt16BE(fid, 2);
-    data.copy(output, 4);
+    output.writeUInt16BE(id, 4);
+    data.copy(output, 6);
 
     return output;
 };
@@ -58,7 +64,7 @@ exports.compareBus = function(bus_a, bus_b) {
 };
 
 exports.makePacket = function(bus_id, address, data) {
-    var output = Buffer.alloc(data.length + 9);
+    const output = Buffer.alloc(data.length + 9);
     output.writeUInt16BE(data.length + 7, 0);
     if (Array.isArray(bus_id)) {
         bus_id = Buffer.from(bus_id);
@@ -66,7 +72,7 @@ exports.makePacket = function(bus_id, address, data) {
     bus_id.copy(output, 2, 0, 4);
     output.writeUInt8(address, 6);
     data.copy(output, 7);
-    var crc = exports.crc16(output, 0, data.length + 7);
+    const crc = exports.crc16(output, 0, data.length + 7);
     output.writeUInt16BE(crc, data.length + 7);
 
     return output;
@@ -74,13 +80,13 @@ exports.makePacket = function(bus_id, address, data) {
 
 exports.parsePacket = function(data) {
     try {
-        var length = data.readUInt16BE(0);
-        if (length != data.length - 2) {
+        const length = data.readUInt16BE(0);
+        if (length > data.length - 2) {
             return null;
         }
-        var bus_id = [ data[2], data[3], data[4], data[5]];
-        var address = data.readUInt8(6);
-        var payload = data.slice(7);
+        const bus_id = [ data[2], data[3], data[4], data[5]];
+        const address = data.readUInt8(6);
+        const payload = data.slice(7);
         return {
             bus_id: bus_id,
             address: address,
