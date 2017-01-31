@@ -27,13 +27,10 @@ exports.methods = [
     {
         name: "setLEDState",
         callback: function(router, device, params, callback) {
-            if (params.state == undefined) {
-                return callback({ error: "State not defined." });
-            }
-            const value = parseInt(params.state);
-            if (isNaN(value)) {
+            if (isNaN(params.state)) {
                 return callback({ error: "State not a number." });
             }
+            const value = parseInt(params.state);
             router.dispatch(device, SET_LED_FID, new LObject().push(LObject.TYPES.INT8, value), false, function(device, header, router, obj) {
                 if (device == null) {
                     return callback({ error: "Message failed to send." });
