@@ -37,7 +37,7 @@ function Router() {
         for (let i = 0; i < $this.messageQueue.length; i++) {
             const msg = $this.messageQueue[i];
             if (msg.id == header.id) {
-                $this.messageQueue = $this.messageQueue.splice(i, 1);
+                $this.messageQueue.splice(i, 1);
                 if (msg.callback != undefined) {
                     msg.callback(device, header, router, obj);
                 }
