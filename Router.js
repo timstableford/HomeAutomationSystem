@@ -5,9 +5,18 @@ const dgram = require('dgram');
 const packet  = require('./Packet');
 const LObject = require('./LObject.js');
 
+const MESSAGE_RETRY_TIMEOUT = 500; // Milliseconds.
+const MESSAGE_RETRY_COUNT = 5; // How many times to try sending a message.
+const DISPATCH_LOOP_TIME = 200; // Milliseconds.
+const DEVICE_TIMEOUT = 5000; // Milliseconds.
+const DEVICE_STATE_LOOP_TIME = 500;  // Milliseconds.
+const DEVICE_ONLINE = "online";
+const DEVICE_OFFLINE = "offline";
+
 function Router() {
     this.listeners = [];
     this.deviceList = [];
+    this.stateListeners = [];
     this.messageQueue = [];
     this.messageQueueId = 0;
 
@@ -16,12 +25,12 @@ function Router() {
     this.on(Router.TYPE_GENERIC, Router.PING_FID, function (device, header, router, obj) {
         router.dispatch(device, Router.PONG_FID, new LObject().push(LObject.TYPES.UINT32, Math.floor(Date.now() / 1000)), true);
         // Get the time at element 0.
-        device.last_ping = obj.getAt(0) * 1000;
+        device.last_ping = Date.now();
     });
     // Parse Pong.
     this.on(Router.TYPE_GENERIC, Router.PONG_FID, function (device, header, router, obj) {
         // Get the time at element 0.
-        device.last_ping = obj.getAt(0) * 1000;
+        device.last_ping = Date.now();
     });
     // Parse ACK.
     this.on(Router.TYPE_GENERIC, Router.ACK_FID, function (device, header, router, obj) {
@@ -29,6 +38,9 @@ function Router() {
             const msg = $this.messageQueue[i];
             if (msg.id == header.id) {
                 $this.messageQueue = $this.messageQueue.splice(i, 1);
+                if (msg.callback != undefined) {
+                    msg.callback(device, header, router, obj);
+                }
                 break;
             }
         }
@@ -47,18 +59,39 @@ function Router() {
     function doDispatch() {
         for (let i = 0; i < $this.messageQueue.length; i++) {
             const msg = $this.messageQueue[i];
-            if (Date.now() - msg.time > 1000) {
-                if (msg.retries > 5) {
+            if (Date.now() - msg.time > MESSAGE_RETRY_TIMEOUT) {
+                if (msg.retries > MESSAGE_RETRY_COUNT) {
                     console.log("Failed to send message:");
                     console.log(JSON.toString(msg));
+                    $this.messageQueue = $this.messageQueue.splice(i, 1);
+                    if (msg.callback != undefined) {
+                        msg.callback(null, null, null, null);
+                    }
                 }
                 $this.client.send(msg.data, msg.device.router.port, msg.device.router.address);
                 msg.time = Date.now();
                 msg.retries++;
             }
         }
-        setTimeout(doDispatch, 500);
+        setTimeout(doDispatch, DISPATCH_LOOP_TIME);
     }
+    doDispatch();
+
+    function checkStates() {
+        for (let i = 0; i < $this.deviceList.length; i++) {
+            const device = $this.deviceList[i];
+            const new_state  = (Date.now() - device.last_ping > DEVICE_TIMEOUT) ? DEVICE_OFFLINE : DEVICE_ONLINE;
+            if (new_state != device.state) {
+                device.state = new_state;
+                console.log(`Device ${device.uid} new state: ${device.state}`);
+                for (let j = 0; j < $this.stateListeners.length; j++) {
+                    $this.stateListeners[i](device, $this);
+                }
+            }
+        }
+        setTimeout(checkStates, DEVICE_STATE_LOOP_TIME);
+    }
+    checkStates();
 }
 
 Router.TYPE_GENERIC = 0;
@@ -70,7 +103,11 @@ Router.MAKE_FID = 1;
 Router.GENERIC_FID = 0;
 Router.NO_ACK_ID = 0;
 
-Router.prototype.dispatch = function(device, fid, obj, noack = false) {
+Router.prototype.onState = function(callback) {
+    this.stateListeners.push(callback);
+};
+
+Router.prototype.dispatch = function(device, fid, obj, noack = false, callback = undefined) {
     let id = 0;
     if (noack) {
         id = Router.NO_ACK_ID
@@ -90,7 +127,8 @@ Router.prototype.dispatch = function(device, fid, obj, noack = false) {
         id: id,
         data: data,
         time: Date.now(),
-        retries: 0
+        retries: 0,
+        callback: callback
     };
 
     if (!noack) {
@@ -112,7 +150,7 @@ Router.prototype.listen = function(port) {
     const $this  = this;
     this.client.on('listening', function () {
         const address = $this.client.address();
-        console.log('UDP Server listening on ' + address.address + ":" + address.port);
+        console.log(`UDP Server listening on ${address.address}:${address.port}`);
     });
     this.client.on('message', function (message, remote) {
         const parsed = packet.parsePacket(message);
@@ -134,7 +172,8 @@ Router.prototype.makeDevice = function(bus_id, address, type) {
         address: address,
         type: type,
         last_ping: 0,
-        uid: `${bus_id[0]}.${bus_id[1]}.${bus_id[2]}.${bus_id[3]}.${address}`
+        uid: `${bus_id[0]}.${bus_id[1]}.${bus_id[2]}.${bus_id[3]}.${address}`,
+        state: DEVICE_ONLINE
     };
     let listener = null;
     for (let i = 0; i < this.listeners.length; i++) {
