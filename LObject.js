@@ -226,6 +226,10 @@ LObject.prototype.getAt = function(index) {
     return this.items[index].data;
 };
 
+LObject.prototype.getLength = function() {
+    return this.items.length;
+};
+
 LObject.prototype.toJSON = function() {
     return JSON.stringify(this.items);
 };
