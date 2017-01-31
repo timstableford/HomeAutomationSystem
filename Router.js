@@ -229,6 +229,9 @@ Router.prototype.getDeviceFromName = function(name) {
 };
 
 Router.prototype.findDevice = function(name, address = null) {
+    if (name == null || name == undefined) {
+        return null;
+    }
     if (address != null) {
         return this.getDevice(name, address);
     }
