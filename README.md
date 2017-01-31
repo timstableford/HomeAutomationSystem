@@ -1,8 +1,5 @@
 # Project Description
-This project is another IoT hub with some speciality. It communicates over UDP
-to a micro-controller that acts as a router, node or both. In router mode it can
-forward data from other communication busses such as PJON. It's designed to be simple
-to add more device types and their corresponding REST API's.
+This project is another IoT hub with some speciality. It communicates over UDP to a micro-controller that acts as a router, node or both. In router mode it can forward data from other communication busses such as PJON. It's designed to be simple to add more device types and their corresponding REST API's.
 
 # Adding a device type
 To add a device create a folder under devices with an index.js in.
