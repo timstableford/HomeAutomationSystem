@@ -9,13 +9,13 @@ const registry = new DeviceRegistry(router);
 router.listen(42237);
 
 app.get('/devices/:uid', function(req, res) {
-    res.send(router.findDevice(req.params.uid));
+    res.json(router.findDevice(req.params.uid));
 });
 
 app.get('/devices/:uid/methods', function(req, res) {
     const device = router.findDevice(req.params.uid);
     if (device == null) {
-        res.status(404).send("Device not found.");
+        res.json({ error: "Device not found." });
     } else {
         res.send(registry.getMethods(device));
     }
@@ -24,25 +24,33 @@ app.get('/devices/:uid/methods', function(req, res) {
 app.get('/devices/:uid/methods/:method', function(req, res) {
     const device = router.findDevice(req.params.uid);
     if (device == null) {
-        res.status(404).send("Device not found.");
+        res.json({ error: "Device not found." });
     } else {
-        registry.parse(device, req.params.method, req.query, function(result, message) {
-            if (result) {
-                res.send(message);
-            } else {
-                res.status(503).send(message);
-            }
-            return result;
+        registry.parse(device, req.params.method, req.query, function(message) {
+            res.json(message);
         });
     }
 });
 
 app.get('/devices', function (req, res) {
-    res.send(JSON.stringify(router.getDevices()));
+    res.json(router.getDevices());
+});
+
+app.get('/modules', function (req, res) {
+    const modules = registry.getModules();
+    const smallModules = [];
+    for (let i = 0; i < modules.length; i++) {
+        smallModules.push({
+            type: modules[i].type,
+            name: modules[i].name,
+            methods: registry.getTypeMethodNames(modules[i].type)
+        });
+    }
+    res.json(smallModules);
 });
 
 app.get('/messages', function (req, res) {
-    res.send(JSON.stringify(router.messageQueue));
+    res.json(router.messageQueue);
 });
 
 app.listen(42238, function () {
