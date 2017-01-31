@@ -2,6 +2,7 @@
  * Created by tstableford on 30/01/17.
  */
 const LObject = require.main.require('./LObject.js');
+const Router = require.main.require('./Router.js');
 
 // LED Toggle Type
 const LED_TYPE_ID = 325;
@@ -11,6 +12,17 @@ const GET_LED_FID = 101;
 exports.name = "LED Switch";
 exports.type = LED_TYPE_ID;
 
+// .routes are methods to be registered to the device router.
+// An example would be to router.on(TYPE, Router.MAKE_FID.....etc) as a constructor for the device.
+exports.routes = [
+    {
+        fid: Router.MAKE_FID,
+        callback: function (device, header, router, obj) {
+            console.log("Made an LED device.");
+        }
+    }
+];
+// Methods are public API functions.
 exports.methods = [
     {
         name: "setLEDState",
@@ -44,9 +56,3 @@ exports.methods = [
         }
     }
 ];
-
-// This is where any callbacks from the device would be registered. Any other initialization would be done here too.
-// An example would be to router.on(TYPE, Router.MAKE_FID.....etc) as a constructor for the device.
-exports.register = function(router) {
-    console.log("Registering LED device module.");
-};

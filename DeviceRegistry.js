@@ -28,11 +28,33 @@ function DeviceRegistry(router) {
         files.forEach(function(file) {
             if (fs.lstatSync(path.join(normalizedPath, file)).isDirectory()) {
                 const module = require("./devices/" + file);
-                module.register($this.router);
-                for (let i = 0; i < module.methods.length; i++) {
-                    $this.on(module.type, module.methods[i].name, module.methods[i].callback);
+                if (module.name == undefined) {
+                    console.log(`${file} module has no name. Cannot register.`);
+                } else if (module.type == undefined) {
+                    console.log(`${file} module has no type. Cannot register.`);
+                } else if (isNaN(module.type)) {
+                    console.log(`${file} module type is NaN. Cannot register.`);
+                } else {
+                    // Register the module public API methods.
+                    if (Array.isArray(module.methods)) {
+                        for (let i = 0; i < module.methods.length; i++) {
+                            $this.on(module.type, module.methods[i].name, module.methods[i].callback);
+                        }
+                    } else {
+                        console.log(`${module.name} has no public methods`);
+                    }
+                    // Register the module routes for the router.
+                    if (Array.isArray(module.routes)) {
+                        for (let i = 0; i < module.routes.length; i++) {
+                            $this.router.on(module.type, module.routes[i].fid, module.routes[i].callback);
+                        }
+                    } else {
+                        console.log(`${module.name} has no routes`);
+                    }
+
+                    $this.modules.push(module);
+                    console.log(`Registered module ${module.name}`);
                 }
-                $this.modules.push(module);
             }
         });
     });

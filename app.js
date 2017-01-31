@@ -8,6 +8,8 @@ const router = new Router();
 const registry = new DeviceRegistry(router);
 router.listen(42237);
 
+app.set('json spaces', 1);
+
 app.get('/devices/:uid', function(req, res) {
     res.json(router.findDevice(req.params.uid));
 });
@@ -41,8 +43,8 @@ app.get('/modules', function (req, res) {
     const smallModules = [];
     for (let i = 0; i < modules.length; i++) {
         smallModules.push({
-            type: modules[i].type,
             name: modules[i].name,
+            type: modules[i].type,
             methods: registry.getTypeMethodNames(modules[i].type)
         });
     }
@@ -51,6 +53,16 @@ app.get('/modules', function (req, res) {
 
 app.get('/messages', function (req, res) {
     res.json(router.messageQueue);
+});
+
+app.get('/', function (req, res) {
+    const routes = [];
+    app._router.stack.forEach(function(r) {
+        if (r.route && r.route.path) {
+            routes.push(r.route.path);
+        }
+    });
+    res.json(routes, null, 2);
 });
 
 app.listen(42238, function () {
