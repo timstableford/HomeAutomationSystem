@@ -19,6 +19,7 @@ function DeviceRegistry(router) {
             return callback({ error: "Could not find device." });
         }
         device.name = params.name;
+        router.saveDevices();
         return callback(device);
     });
 
