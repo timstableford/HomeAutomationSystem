@@ -4,6 +4,7 @@
 const dgram = require('dgram');
 const packet  = require('./Packet');
 const LObject = require('./LObject.js');
+const fs = require('fs');
 
 const MESSAGE_RETRY_TIMEOUT = 500; // Milliseconds.
 const MESSAGE_RETRY_COUNT = 5; // How many times to try sending a message.
@@ -12,6 +13,7 @@ const DEVICE_TIMEOUT = 5000; // Milliseconds.
 const DEVICE_STATE_LOOP_TIME = 500;  // Milliseconds.
 const DEVICE_ONLINE = "online";
 const DEVICE_OFFLINE = "offline";
+const DEVICE_LIST_FILE = "devices.json";
 
 function Router() {
     this.listeners = [];
@@ -21,6 +23,20 @@ function Router() {
     this.messageQueueId = 0;
 
     const $this = this;
+    // Try to load the device list.
+    try {
+        const fileContents = fs.readFileSync(DEVICE_LIST_FILE);
+        const deviceFile = JSON.parse(fileContents);
+        if (Array.isArray(deviceFile)) {
+            $this.deviceList = deviceFile;
+            console.log("Loaded devices from file.")
+        } else {
+            console.log("Device file root element is not an array.");
+        }
+    } catch (err) {
+        console.log("Failed to load devices file.");
+    }
+
     // Parse ping.
     this.on(Router.TYPE_GENERIC, Router.PING_FID, function (device, header, router, obj) {
         router.dispatch(device, Router.PONG_FID, new LObject().push(LObject.TYPES.UINT32, Math.floor(Date.now() / 1000)), true);
@@ -63,10 +79,11 @@ function Router() {
                 if (msg.retries > MESSAGE_RETRY_COUNT) {
                     console.log("Failed to send message:");
                     console.log(JSON.toString(msg));
-                    $this.messageQueue = $this.messageQueue.splice(i, 1);
+                    $this.messageQueue.splice(i, 1);
                     if (msg.callback != undefined) {
                         msg.callback(null, null, null, null);
                     }
+                    continue;
                 }
                 $this.client.send(msg.data, msg.device.router.port, msg.device.router.address);
                 msg.time = Date.now();
@@ -107,6 +124,15 @@ Router.prototype.onState = function(callback) {
     this.stateListeners.push(callback);
 };
 
+Router.prototype.saveDevices = function() {
+    fs.writeFile(DEVICE_LIST_FILE, JSON.stringify(this.deviceList, null, 2), function (err) {
+        if (err) {
+            return console.log(err);
+        }
+        console.log('Device List Written.');
+    });
+};
+
 Router.prototype.dispatch = function(device, fid, obj, noack = false, callback = undefined) {
     let id = 0;
     if (noack) {
@@ -119,7 +145,7 @@ Router.prototype.dispatch = function(device, fid, obj, noack = false, callback =
         id = this.messageQueueId;
     }
 
-    const header = packet.makeHeader(device.type, fid, this.messageQueueId, obj.getBuffer());
+    const header = packet.makeHeader(device.type, fid, id, obj.getBuffer());
     const data = packet.makePacket(device.bus_id, device.address, header);
     const msg = {
         device: device,
@@ -185,8 +211,24 @@ Router.prototype.makeDevice = function(bus_id, address, type) {
     if (listener != null) {
         listener.callback(device);
     }
+    this.saveDevices();
 
     return device;
+};
+
+Router.prototype.removeDevice = function(device) {
+    const checkedDevice = this.getDeviceFromUid(device.uid);
+    if (checkedDevice != null) {
+        for (let i = 0; i < this.deviceList.length; i++) {
+            if (this.deviceList[i].uid == checkedDevice.uid) {
+                this.deviceList.splice(i, 1);
+                this.saveDevices();
+                return true;
+            }
+        }
+
+    }
+    return false;
 };
 
 Router.prototype.getDevice = function(bus_id, address) {

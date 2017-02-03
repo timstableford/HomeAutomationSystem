@@ -23,6 +23,16 @@ app.get('/devices/:uid/methods', function(req, res) {
     }
 });
 
+app.get('/devices/:uid/remove', function(req, res) {
+    const device = router.findDevice(req.params.uid);
+    if (device == null) {
+        res.json({ error: "Device not found." });
+    } else {
+        router.removeDevice(device);
+        res.json(router.getDevices());
+    }
+});
+
 app.get('/devices/:uid/methods/:method', function(req, res) {
     const device = router.findDevice(req.params.uid);
     if (device == null) {
