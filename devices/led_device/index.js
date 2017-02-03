@@ -18,7 +18,7 @@ exports.routes = [
     {
         fid: Router.MAKE_FID,
         callback: function (device, header, router, obj) {
-            console.log(`Made an LED device (uid: ${device.uid}.`);
+            console.log(`Made an LED device (uid: ${device.uid})`);
         }
     }
 ];
